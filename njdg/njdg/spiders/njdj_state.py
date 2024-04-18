@@ -25,7 +25,7 @@ POPUP_ALERT, CASES_XPATH, CASE_NEXT_PAGENATION_XPATH, \
 SECOND_CAPTCHA_IFRAME_XPATH, SECOND_LOOP_CAPTCHA_XPATH, SECOND_CAPTCHA_BOX, \
 SECOND_CAPTCHA_SUBMIT_BUTTON, SECOND_CAPTCHA_ERROR_XPATH, FIRST_BACK_XPATH, \
 SECOND_BACK_XPATH, THIRD_BACK_XPATH, FOURTH_BACK_XPATH, FIFTH_BACK_XPATH, \
-IFRAME_XPATH_DATA_PAGE
+IFRAME_XPATH_DATA_PAGE, ESTABLISHMENT_NEXT_BUTTON_XPATH, DIST_PAGENATION_XPATH
 
 
 class MySpider(scrapy.Spider):
@@ -38,7 +38,6 @@ class MySpider(scrapy.Spider):
 
     async def parse(self, response):
         async with async_playwright() as p:
-            current_datetime = datetime.now()  # Get the current date and time
             current_date = datetime.now().strftime("%Y-%m-%d")  # Assign Current Dates
 
             # STEP 0: Creating FOLDER/FILE STRUCTURE FOR OUTPUT 
@@ -87,7 +86,6 @@ class MySpider(scrapy.Spider):
                     ])
 
             def csv_file(data):
-                # CRNNumber_for_file_name = CRNNumber[0]
                 with open(csv_file_path, 'a', newline='', encoding='utf-8') as csv_file:
                     csv_writer = csv.writer(csv_file)
                     csv_writer.writerow(data)
@@ -202,45 +200,62 @@ class MySpider(scrapy.Spider):
 
             async def fourth_loop_establishment():
                 time.sleep(3)
-                await page.wait_for_selector(EST_REPORT_BODY, state='visible', timeout=5000)
-                elements = await page.query_selector_all(EST_REPORT_BODY)
-                print("LEN OF ELEMENTS in ESTABLISHMENT: ",len(elements))
-                establishment_row = 0
-                for element in elements:
-                    # if establishment_row < 1:
-                    #     establishment_row+=1
-                    #     continue
-                    time.sleep(3)
-                    await asyncio.sleep(1)
-                    await element.is_visible()
-                    await element.click()
-                    await page.wait_for_load_state(NETWORK_IDLE)
+                while True:
+                    await page.wait_for_selector(EST_REPORT_BODY, state='visible', timeout=5000)
+                    elements = await page.query_selector_all(EST_REPORT_BODY)
+                    print("LEN OF ELEMENTS in ESTABLISHMENT: ",len(elements))
+                    establishment_row = 0
+                    for element in elements:
+                        # if establishment_row < 1:
+                        #     establishment_row+=1
+                        #     continue
+                        time.sleep(3)
+                        await asyncio.sleep(1)
+                        await element.is_visible()
+                        await element.click()
+                        await page.wait_for_load_state(NETWORK_IDLE)
 
-                    #STEP 5: First Captcha Solution
-                    await first_captcha_solution(page,CAPTCHA_IMAGE_XPATH,CAPTCHA_FILL_BOX,SUBMIT_BUTTON,POPUP_ALERT)
+                        #STEP 5: First Captcha Solution
+                        await first_captcha_solution(page,CAPTCHA_IMAGE_XPATH,CAPTCHA_FILL_BOX,SUBMIT_BUTTON,POPUP_ALERT)
 
-                    #STEP 6: Click on Button and Get Case text
-                    await get_case_text_and_click_on_case_button()
-                    await fourth_back_func(page, FOURTH_BACK_XPATH)
+                        #STEP 6: Click on Button and Get Case text
+                        await get_case_text_and_click_on_case_button()
+                        await fourth_back_func(page, FOURTH_BACK_XPATH)
+
+                    ESTABLISHMENT_page_elements = await page.query_selector_all(ESTABLISHMENT_NEXT_BUTTON_XPATH)
+                    if ESTABLISHMENT_page_elements:
+                        await ESTABLISHMENT_page_elements[0].click()
+                    else:
+                        print("Button not present")
+                        break
 
             async def third_loop_district():
-                await page.wait_for_selector(DIST_REPORT_BODY, state="visible",timeout=5000)
-                elements = await page.query_selector_all(DIST_REPORT_BODY)
-                print("LENGTH OF District Element: ",len(elements))
-                dist_row = 0
-                for element in elements:
-                    # if dist_row < 4:
-                    #     dist_row+=1
-                    #     continue
-                    await asyncio.sleep(1)
-                    await element.is_visible()
-                    await element.click()
-                    await page.wait_for_load_state(NETWORK_IDLE)
+                while True:
+                    await page.wait_for_selector(DIST_REPORT_BODY, state="visible",timeout=5000)
+                    elements = await page.query_selector_all(DIST_REPORT_BODY)
+                    print("LENGTH OF District Element: ",len(elements))
+                    dist_row = 0
+                    for element in elements:
+                        # if dist_row < 4:
+                        #     dist_row+=1
+                        #     continue
+                        await asyncio.sleep(1)
+                        await element.is_visible()
+                        await element.click()
+                        await page.wait_for_load_state(NETWORK_IDLE)
 
-                    #STEP 4: Fourth Button
-                    print("GOING TO ENTER IN THE FOURTH LOOP ")
-                    await fourth_loop_establishment()
-                    await third_back_func(page, THIRD_BACK_XPATH)
+                        #STEP 4: Fourth Button
+                        print("GOING TO ENTER IN THE FOURTH LOOP ")
+                        await fourth_loop_establishment()
+                        await third_back_func(page, THIRD_BACK_XPATH)
+
+                    dist_page_elements = await page.query_selector_all(DIST_PAGENATION_XPATH)
+                    if dist_page_elements: # Check if any next page elements are found
+                        await dist_page_elements[0].click()
+                        await asyncio.sleep(3) # Optional: wait for a specific amount of time (e.g., 3 seconds) if needed
+                    else:
+                        print("Button not present")
+                        break
 
             async def second_loop_state():
                 await page.wait_for_selector(SECOND_LOOP_BUTTON_STATE_REPORT, state="visible",timeout=5000)
@@ -256,9 +271,9 @@ class MySpider(scrapy.Spider):
                     print("LENGTH OF FIRST LOOP ELEMETS: ",len(elements))
                     first_loop_year_row = 0
                     for element in elements:
-                        # if first_loop_year_row < 7:
-                        #     first_loop_year_row += 1
-                        #     continue
+                        if first_loop_year_row < 10:
+                            first_loop_year_row += 1
+                            continue
 
                         await element.click()
                         await page.wait_for_load_state(NETWORK_IDLE)

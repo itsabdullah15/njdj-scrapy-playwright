@@ -11,6 +11,8 @@ SUBMIT_BUTTON='.btn.btn-success.col-auto.btn-sm'
 POPUP_ALERT='dialog'
 CASES_XPATH="//td[@class='sorting_1']/a"
 CASE_NEXT_PAGENATION_XPATH = '//a[@class="paginate_button next" and @aria-controls="example_cases"]'
+ESTABLISHMENT_NEXT_BUTTON_XPATH='//a[@class="paginate_button next" and @aria-controls="example_est"]'
+DIST_PAGENATION_XPATH='//a[@class="paginate_button next" and @aria-controls="example_dist"]'
 SECOND_CAPTCHA_IFRAME_XPATH="//iframe[@id='case_history']"
 SECOND_LOOP_CAPTCHA_XPATH="//img[@id='captcha_image']"
 SECOND_CAPTCHA_BOX="#captcha"
