@@ -9,7 +9,6 @@ import re
 import numpy as np
 from .mapping_file import IDENS
 
-
 async def first_captcha_solution(page,CAPTCHA_IMAGE_XPATH,CAPTCHA_FILL_BOX,SUBMIT_BUTTON,POPUP_ALERT):
     for _ in range(15):
         current_datetime = datetime.now()

@@ -1,18 +1,11 @@
 import scrapy
-from playwright.async_api import async_playwright, TimeoutError
+from playwright.async_api import async_playwright
 import asyncio
 import time
-from io import BytesIO
-from PIL import Image
-import pytesseract
-import cv2
 from datetime import datetime
-import re
-import numpy as np
-import os
-import csv
 from .mapping_file import IDENS
 from ..utils import delete_png_files
+from .folder_structure import FileLogger
 from .Capthas_solution import first_captcha_solution,solving_second_captcha
 from .get_data import case_type,filing_number,filing_date,registration_number,crn_number,\
 registration_date,first_hearing_date, next_hearing,stage_of_case,court_number_and_judge,\
@@ -41,55 +34,8 @@ class MySpider(scrapy.Spider):
             current_date = datetime.now().strftime("%Y-%m-%d")  # Assign Current Dates
 
             # STEP 0: Creating FOLDER/FILE STRUCTURE FOR OUTPUT 
+            file_logger = FileLogger() # Create an instance of the FileLogger class
             delete_png_files(IDENS.capctcha_folder_path)
-            Output_Folder_Location = IDENS.Output_Folder_Location
-            folder_path = os.path.join(Output_Folder_Location, current_date)  # Construct folder path
-
-            try:
-                os.makedirs(folder_path)  # Create folder if it doesn't exist
-                print(f"Folder '{current_date}' created successfully at {Output_Folder_Location}")
-            except FileExistsError:
-                print(f"Folder '{current_date}' already exists at {Output_Folder_Location}")
-
-            csv_file_path = f'{Output_Folder_Location}/{current_date}/Audit_{current_date}.csv'  # Assign CSV Paths
-            if not os.path.isfile(csv_file_path):  # Check if the CSV file existss
-                with open(csv_file_path, 'w', newline='',
-                          encoding='utf-8') as csv_file:  # If it doesn't exist, create the file and write header
-                    csv_writer = csv.writer(csv_file)
-                    csv_writer.writerow([
-                        'Cases',
-                        'Case Type',
-                        'Filing Number',
-                        'Filing Date',
-                        'Registration Number',
-                        'Registration Date',
-                        'CNR Number',
-                        'First Hearing Date',
-                        'Next Hearing Date',
-                        'Stage of Case',
-                        'Court Number and Judge',
-                        'Petitioner and Advocate',
-                        'Respondent and Advocate',
-                        'Under Act(s)',
-                        'Under Section(s)',
-                        'Date of data scraping'
-                    ])
-
-            error_file_path = f'{Output_Folder_Location}/{current_date}/Error_log_{current_date}.csv'
-            if not os.path.isfile(error_file_path):
-                with open(error_file_path, 'w', newline='', encoding='utf-8') as csv_file:
-                    csv_writer = csv.writer(csv_file)
-                    csv_writer.writerow([
-                        'Cases',
-                        'Error',
-                        'Date'
-                    ])
-
-            def csv_file(data):
-                with open(csv_file_path, 'a', newline='', encoding='utf-8') as csv_file:
-                    csv_writer = csv.writer(csv_file)
-                    csv_writer.writerow(data)
-
             browser = await p.chromium.launch(headless=False)
             page = await browser.new_page()
             await page.set_viewport_size({"width": 1920, "height": 1080})
@@ -104,7 +50,6 @@ class MySpider(scrapy.Spider):
                 iframe_element = await page.query_selector(IFRAME_XPATH_DATA_PAGE)
                 case_frame = await iframe_element.content_frame()
 
-                # Extract the "Case Types" value
                 # Run all asynchronous functions concurrently
                 results = await asyncio.gather(
                     case_type(case_frame),
@@ -168,7 +113,7 @@ class MySpider(scrapy.Spider):
                     current_date
                 ]
 
-                csv_file(data_to_save)
+                file_logger.log_to_csv(data_to_save)
                 case.clear()
                 time.sleep(3)
 
@@ -181,7 +126,7 @@ class MySpider(scrapy.Spider):
                         element_case_text = await element.inner_text() # Retrieve the text of the element
                         case.append(element_case_text)
                         print("ELEMENT TEXT: ", element_case_text)
-                        await page.wait_for_load_state(NETWORK_IDLE)
+                        # await page.wait_for_load_state(NETWORK_IDLE)
                         await element.click() #Clicking on Case(Element) for second captcha
 
                         #STEP 7: SOLVING THE SECOND CAPTHCHA
@@ -189,7 +134,9 @@ class MySpider(scrapy.Spider):
                                  SECOND_LOOP_CAPTCHA_XPATH,SECOND_CAPTCHA_BOX,
                                  SECOND_CAPTCHA_SUBMIT_BUTTON,SECOND_CAPTCHA_ERROR_XPATH)
                         await get_data_from_file()
+                        delete_png_files(IDENS.capctcha_folder_path)
                         await fifth_back_fucntion(page, FIFTH_BACK_XPATH)
+                        time.sleep(1)
                     
                     next_page_elements = await page.query_selector_all(CASE_NEXT_PAGENATION_XPATH)
                     if next_page_elements:
@@ -265,16 +212,15 @@ class MySpider(scrapy.Spider):
             # STEP 1: First Loop
             async def first_loop_year():
                 while True:
-                    await page.wait_for_selector(STATE_BODY_REPORT,state='visible',timeout=5000)
+                    await page.wait_for_selector(STATE_BODY_REPORT,state='visible',timeout=5000)                            
                     elements = await page.query_selector_all(STATE_BODY_REPORT)
                     await page.wait_for_load_state(NETWORK_IDLE)
                     print("LENGTH OF FIRST LOOP ELEMETS: ",len(elements))
                     first_loop_year_row = 0
                     for element in elements:
-                        if first_loop_year_row < 10:
-                            first_loop_year_row += 1
-                            continue
-
+                        # if first_loop_year_row < 4:
+                        #     first_loop_year_row += 1
+                        #     continue
                         await element.click()
                         await page.wait_for_load_state(NETWORK_IDLE)
                         
