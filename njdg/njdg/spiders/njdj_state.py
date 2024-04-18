@@ -105,8 +105,7 @@ class MySpider(scrapy.Spider):
                 # Extract the "Case Type" value
                 async def case_type():
                     try:
-                        case_type_element = await case_frame.query_selector(
-                            "(//span[@class='case_details_table'])[1]")  # Locate the element using XPath
+                        case_type_element = await case_frame.query_selector("(//span[@class='case_details_table'])[1]")  # Locate the element using XPath
                         case_type_text = await case_type_element.text_content() if case_type_element else None  # Get the text content of the element
                         # If the element is found, split the text and get the "Case Type"
                         if case_type_text:
