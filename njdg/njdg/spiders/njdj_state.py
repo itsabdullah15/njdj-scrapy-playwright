@@ -12,6 +12,16 @@ import numpy as np
 import os
 import csv
 from .mapping_file import IDENS
+from ..utils import delete_png_files
+from .back_function import fifth_back_fucntion, fourth_back_func, third_back_func, second_back_func, first_back_func
+from njdg.spiders.njdj_constant import FETCH_YEAR_DATE, NETWORK_IDLE, STATE_BODY_REPORT,\
+EXAMPLE_YEAR_NEXT_PAGENATION, SECOND_LOOP_BUTTON_STATE_REPORT, DIST_REPORT_BODY, \
+EST_REPORT_BODY, CAPTCHA_IMAGE_XPATH, CAPTCHA_FILL_BOX, SUBMIT_BUTTON, \
+POPUP_ALERT, CASES_XPATH, CASE_NEXT_PAGENATION_XPATH, \
+SECOND_CAPTCHA_IFRAME_XPATH, SECOND_LOOP_CAPTCHA_XPATH, SECOND_CAPTCHA_BOX, \
+SECOND_CAPTCHA_SUBMIT_BUTTON, SECOND_CAPTCHA_ERROR_XPATH, FIRST_BACK_XPATH, \
+SECOND_BACK_XPATH, THIRD_BACK_XPATH, FOURTH_BACK_XPATH, FIFTH_BACK_XPATH, \
+IFRAME_XPATH_DATA_PAGE
 
 
 class MySpider(scrapy.Spider):
@@ -28,6 +38,7 @@ class MySpider(scrapy.Spider):
             current_date = datetime.now().strftime("%Y-%m-%d")  # Assign Current Dates
 
             # STEP 0: Creating FOLDER/FILE STRUCTURE FOR OUTPUT 
+            delete_png_files(IDENS.capctcha_folder_path)
             Output_Folder_Location = IDENS.Output_Folder_Location
             folder_path = os.path.join(Output_Folder_Location, current_date)  # Construct folder path
 
@@ -77,35 +88,18 @@ class MySpider(scrapy.Spider):
                     csv_writer = csv.writer(csv_file)
                     csv_writer.writerow(data)
 
-            def delete_png_files(folder_path):
-                try:
-                    # Get list of files in the folder
-                    files = os.listdir(folder_path)
-                    # Iterate over files and delete .png files
-                    for file in files:
-                        if file.endswith('.png'):
-                            os.remove(os.path.join(folder_path, file))
-                            print(f"Deleted: {file}")
-
-                    print("All .png files deleted successfully.")
-                except Exception as e:
-                    print(f"An error occurred: {e}")
-
-            delete_png_files(IDENS.capctcha_folder_path)
-
             browser = await p.chromium.launch(headless=True)
             page = await browser.new_page()
             await page.set_viewport_size({"width": 1920, "height": 1080})
-
             await page.goto(response.url)
 
             # Click on the link
-            await page.evaluate("fetchYearData('tot', 1)")
-            await page.wait_for_load_state('networkidle')  # Wait for the content to update
+            await page.evaluate(FETCH_YEAR_DATE)
+            await page.wait_for_load_state(NETWORK_IDLE)  # Wait for the content to update
 
             async def get_data_from_file():    
-                await page.wait_for_selector("//iframe[@id='case_history']")
-                iframe_element = await page.query_selector("//iframe[@id='case_history']")
+                await page.wait_for_selector(IFRAME_XPATH_DATA_PAGE)
+                iframe_element = await page.query_selector(IFRAME_XPATH_DATA_PAGE)
                 case_frame = await iframe_element.content_frame()
 
                 # Extract the "Case Type" value
@@ -455,43 +449,7 @@ class MySpider(scrapy.Spider):
                 case.clear()
                 time.sleep(3)
 
-            async def fifth_back_fucntion():
-                try:
-                    back_button = await page.query_selector('//button[@onclick="back(6)"]')
-                    await back_button.click()
-                except Exception as e:
-                    print(f"Error while going back: {e}")
 
-            async def fourth_back_func():
-                try:
-                    back_button = await page.query_selector("//a[@href='javascript:back(4)']")
-                    await back_button.click()
-                except Exception as e:
-                    print(f"Error while going back: {e}")
-
-            async def third_back_func():
-                try:
-                    back_button = await page.query_selector("//a[@href='javascript:back(3)']")
-                    await back_button.click()
-                except Exception as e:
-                    print(f"Error while going back: {e}")
-
-            async def second_back_func():
-                try:
-                    back_button = await page.query_selector("//a[@href='javascript:back(2)']")
-                    await back_button.click()
-                except Exception as e:
-                    print(f"Error while going back: {e}")
-
-            async def first_back_func():
-                try:
-                    back_button = await page.query_selector("//a[@href='javascript:back(1)']")
-                    await back_button.click()
-                    print("Clicked")
-                except Exception as e:
-                    print(f"Error while going back: {e}")
-                except PlaywrightTimeoutError as te:
-                    print(f"TimeoutException while going back: {te}")
 
             async def solving_second_captcha():
                 for _ in range(15):
@@ -499,12 +457,12 @@ class MySpider(scrapy.Spider):
                     current_datetime = current_datetime.strftime("%d_%m_%Y_%H_%M_%S")
                     img_download_path = f'{IDENS.capctcha_folder_path}/{current_datetime}.png'
 
-                    iframe_element = await page.query_selector("//iframe[@id='case_history']")
+                    iframe_element = await page.query_selector(SECOND_CAPTCHA_IFRAME_XPATH)
                     frame = await iframe_element.content_frame()
 
                     for _ in range(5):
-                        await frame.wait_for_selector("//img[@id='captcha_image']",timeout=10000)
-                        image_element = await frame.query_selector("//img[@id='captcha_image']")  # Locate the captcha image element within the iframe
+                        await frame.wait_for_selector(SECOND_LOOP_CAPTCHA_XPATH,timeout=10000)
+                        image_element = await frame.query_selector(SECOND_LOOP_CAPTCHA_XPATH)  # Locate the captcha image element within the iframe
                         time.sleep(2)
                     
                     image_bounding_box = await image_element.bounding_box()  # Get the bounding box of the captcha image element
@@ -550,12 +508,12 @@ class MySpider(scrapy.Spider):
                     else:
                         print("Not Able to find the img Path")
 
-                    captcha_input = frame.locator("#captcha")  # Interact with the CAPTCHA input field
+                    captcha_input = frame.locator(SECOND_CAPTCHA_BOX)  # Interact with the CAPTCHA input field
                     await captcha_input.clear()
                     text = str(text)
                     await captcha_input.fill(text)
 
-                    submit_button = await frame.query_selector('//input[@type="submit"]')  # Locate and click the submit button
+                    submit_button = await frame.query_selector(SECOND_CAPTCHA_SUBMIT_BUTTON)  # Locate and click the submit button
                     if submit_button:
                         await submit_button.click()
                         print("Clicked the submit button.")
@@ -564,7 +522,7 @@ class MySpider(scrapy.Spider):
 
                     print("CHECKING THE ERROR ELEMENT")
                     await asyncio.sleep(2)
-                    error_element = await frame.query_selector('//span[@class="error"]')
+                    error_element = await frame.query_selector(SECOND_CAPTCHA_ERROR_XPATH)
                     if error_element:
                         print("Error detected, retrying...")
                         await asyncio.sleep(0.5)
@@ -578,21 +536,21 @@ class MySpider(scrapy.Spider):
             case = []
             async def get_case_text_and_click_on_case_button():
                 while True:
-                    await page.wait_for_selector("//td[@class='sorting_1']/a", state='visible')
-                    elements = await page.query_selector_all("//td[@class='sorting_1']/a")
+                    await page.wait_for_selector(CASES_XPATH, state='visible')
+                    elements = await page.query_selector_all(CASES_XPATH)
                     for element in elements:
                         element_case_text = await element.inner_text() # Retrieve the text of the element
                         case.append(element_case_text)
                         print("ELEMENT TEXT: ", element_case_text)
                         await element.click() #Clicking on Case(Element) for second captcha
+                        await page.wait_for_load_state(NETWORK_IDLE)
 
                         #STEP 7: SOLVING THE SECOND CAPTHCHA
                         await solving_second_captcha()
                         await get_data_from_file()
-                        await fifth_back_fucntion()
+                        await fifth_back_fucntion(page, FIFTH_BACK_XPATH)
                     
-                    next_page_xpath = '//a[@class="paginate_button next" and @aria-controls="example_cases"]'
-                    next_page_elements = await page.query_selector_all(next_page_xpath)
+                    next_page_elements = await page.query_selector_all(CASE_NEXT_PAGENATION_XPATH)
                     if next_page_elements:
                         await next_page_elements[0].click()
                     else:
@@ -609,11 +567,9 @@ class MySpider(scrapy.Spider):
                     async def get_captcha_image_element(page, max_retries=5, retry_delay=1):
                         for attempt in range(max_retries):
                             # Try to find the image element
-                            image_element = await page.query_selector("//img[@id='captcha_image1']")
-                            
+                            image_element = await page.query_selector(CAPTCHA_IMAGE_XPATH)    
                             if image_element:
-                                # If image element is found, return it
-                                return image_element
+                                return image_element # If image element is found, return it
                             
                             # If not found, wait for some time before retrying
                             print(f"Captcha image not found, retrying in {retry_delay} seconds (Attempt {attempt + 1}/{max_retries})")
@@ -624,12 +580,6 @@ class MySpider(scrapy.Spider):
                         return None
                     
                     image_element = await get_captcha_image_element(page) # Usage example
-                    
-                    
-                    # image_element = await page.query_selector("//img[@id='captcha_image1']")
-
-
-
 
                     bounding_box = await image_element.bounding_box()  # Get the bounding box of the image element
                     screenshot = await page.screenshot(full_page=True)  # Capture screenshot of the entire page
@@ -656,12 +606,12 @@ class MySpider(scrapy.Spider):
                         print("Not Able to find")
 
                     '''STEP 8 == After Solving the Captcha Filling the data captcha data into input & Submit'''
-                    await page.fill('#captcha1', text)  # Find and fill captcha input
-                    await page.click('.btn.btn-success.col-auto.btn-sm')  # Click on the submit button
+                    await page.fill(CAPTCHA_FILL_BOX, text)  # Find and fill captcha input
+                    await page.click(SUBMIT_BUTTON)  # Click on the submit button
 
                     # Handle alert if present
                     try:
-                        alert = await page.wait_for_event('dialog')
+                        alert = await page.wait_for_event(POPUP_ALERT)
                         await alert.accept()  # Wait for alert and accept it
                         continue
                     except:
@@ -670,8 +620,8 @@ class MySpider(scrapy.Spider):
 
             async def fourth_loop_establishment():
                 time.sleep(3)
-                await page.wait_for_selector("(//tbody[@id='est_report_body']/tr/td[4]/a)", state='visible', timeout=5000)
-                elements = await page.query_selector_all("(//tbody[@id='est_report_body']/tr/td[4]/a)")
+                await page.wait_for_selector(EST_REPORT_BODY, state='visible', timeout=5000)
+                elements = await page.query_selector_all(EST_REPORT_BODY)
                 print("LEN OF ELEMENTS in ESTABLISHMENT: ",len(elements))
                 establishment_row = 0
                 for element in elements:
@@ -682,18 +632,18 @@ class MySpider(scrapy.Spider):
                     await asyncio.sleep(1)
                     await element.is_visible()
                     await element.click()
-                    await page.wait_for_load_state('networkidle')
+                    await page.wait_for_load_state(NETWORK_IDLE)
 
                     #STEP 5: First Captcha Solution
                     await first_captcha_solution()
 
                     #STEP 6: Click on Button and Get Case text
                     await get_case_text_and_click_on_case_button()
-                    await fourth_back_func()
+                    await fourth_back_func(page, FOURTH_BACK_XPATH)
 
             async def third_loop_district():
-                await page.wait_for_selector("(//tbody[@id='dist_report_body']/tr/td[4]/a)", state="visible",timeout=5000)
-                elements = await page.query_selector_all("(//tbody[@id='dist_report_body']/tr/td[4]/a)")
+                await page.wait_for_selector(DIST_REPORT_BODY, state="visible",timeout=5000)
+                elements = await page.query_selector_all(DIST_REPORT_BODY)
                 print("LENGTH OF District Element: ",len(elements))
                 dist_row = 0
                 for element in elements:
@@ -703,50 +653,48 @@ class MySpider(scrapy.Spider):
                     await asyncio.sleep(1)
                     await element.is_visible()
                     await element.click()
-                    await page.wait_for_load_state('networkidle')
+                    await page.wait_for_load_state(NETWORK_IDLE)
 
                     #STEP 4: Fourth Button
                     print("GOING TO ENTER IN THE FOURTH LOOP ")
                     await fourth_loop_establishment()
-                    await third_back_func()
+                    await third_back_func(page, THIRD_BACK_XPATH)
 
             async def second_loop_state():
-                await page.wait_for_selector("(//tbody[@id='state_report_body']/tr/td[4]/a)[1]", state="visible",timeout=5000)
-                await page.click("(//tbody[@id='state_report_body']/tr/td[4]/a)[1]")
-                await page.wait_for_load_state('networkidle') 
+                await page.wait_for_selector(SECOND_LOOP_BUTTON_STATE_REPORT, state="visible",timeout=5000)
+                await page.click(SECOND_LOOP_BUTTON_STATE_REPORT)
+                await page.wait_for_load_state(NETWORK_IDLE) 
 
             # STEP 1: First Loop
             async def first_loop_year():
                 while True:
-                    elements = await page.query_selector_all("(//tbody[@id='state_report_body']/tr/td[4]/a)")
+                    elements = await page.query_selector_all(STATE_BODY_REPORT)
                     print("LENGTH OF FIRST LOOP ELEMETS: ",len(elements))
                     first_loop_year_row = 0
                     for element in elements:
-                        if first_loop_year_row < 7:
-                            first_loop_year_row += 1
-                            continue
+                        # if first_loop_year_row < 7:
+                        #     first_loop_year_row += 1
+                        #     continue
 
                         await element.click()
-                        await page.wait_for_load_state('networkidle')
+                        await page.wait_for_load_state(NETWORK_IDLE)
                         
                         #STEP 2: Second Button
                         await second_loop_state()
                         time.sleep(1)
                         print("GOING TO ENTER IN THE THIRD LOOP DISTRICT")
+                        
                         #STEP 3: Third Button
                         await third_loop_district()
                         print("THIRD LOOP DISTRICT DONE")
                         time.sleep(1)
-                        await second_back_func()
+                        await second_back_func(page, SECOND_BACK_XPATH)
                         time.sleep(1)
-                        await first_back_func()
+                        await first_back_func(page, FIRST_BACK_XPATH)
                         time.sleep(1)
                     
-                    example_year_next_page_xpath = '//a[@class="paginate_button next" and @aria-controls="example_year"]'
-                    next_page_elements = await page.query_selector_all(example_year_next_page_xpath)
-                    
-                    # Check if any next page elements are found
-                    if next_page_elements:
+                    next_page_elements = await page.query_selector_all(EXAMPLE_YEAR_NEXT_PAGENATION)
+                    if next_page_elements: # Check if any next page elements are found
                         await next_page_elements[0].click()
                         await asyncio.sleep(3) # Optional: wait for a specific amount of time (e.g., 3 seconds) if needed
                     else:
