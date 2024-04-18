@@ -1,5 +1,5 @@
 import scrapy
-from playwright.async_api import async_playwright, TimeoutError as PlaywrightTimeoutError
+from playwright.async_api import async_playwright, TimeoutError
 import asyncio
 import time
 from io import BytesIO
@@ -13,6 +13,9 @@ import os
 import csv
 from .mapping_file import IDENS
 from ..utils import delete_png_files
+from .get_data import case_type,filing_number,filing_date,registration_number,crn_number,\
+registration_date,first_hearing_date, next_hearing,stage_of_case,court_number_and_judge,\
+petitioner_and_advocate, respondent_and_advocate,under_act, under_section
 from .back_function import fifth_back_fucntion, fourth_back_func, third_back_func, second_back_func, first_back_func
 from njdg.spiders.njdj_constant import FETCH_YEAR_DATE, NETWORK_IDLE, STATE_BODY_REPORT,\
 EXAMPLE_YEAR_NEXT_PAGENATION, SECOND_LOOP_BUTTON_STATE_REPORT, DIST_REPORT_BODY, \
@@ -88,7 +91,7 @@ class MySpider(scrapy.Spider):
                     csv_writer = csv.writer(csv_file)
                     csv_writer.writerow(data)
 
-            browser = await p.chromium.launch(headless=True)
+            browser = await p.chromium.launch(headless=False)
             page = await browser.new_page()
             await page.set_viewport_size({"width": 1920, "height": 1080})
             await page.goto(response.url)
@@ -102,345 +105,67 @@ class MySpider(scrapy.Spider):
                 iframe_element = await page.query_selector(IFRAME_XPATH_DATA_PAGE)
                 case_frame = await iframe_element.content_frame()
 
-                # Extract the "Case Type" value
-                async def case_type():
-                    try:
-                        case_type_element = await case_frame.query_selector("(//span[@class='case_details_table'])[1]")  # Locate the element using XPath
-                        case_type_text = await case_type_element.text_content() if case_type_element else None  # Get the text content of the element
-                        # If the element is found, split the text and get the "Case Type"
-                        if case_type_text:
-                            case_type = case_type_text.split(':')[-1].strip()
-                            return case_type
-                        else:
-                            print("Case Type element not found.")
-                            return None
-
-                    except Exception as e:
-                        print(f"An error occurred while fetching Case Type: {str(e)}")
-                        return None
-
-                async def filing_number():
-                    """
-                    This function locates the filing number information on a webpage using Playwright and returns the extracted filing number.
-                    Returns:
-                        filing_number: The extracted filing number as a string, or None if not found.
-                    """
-                    try:
-                        # Locate the element containing filing information using XPath
-                        filing_number_element = await case_frame.query_selector("(//span[@class='case_details_table'])[2]")
-
-                        if filing_number_element:
-                            # Get the text content of the located element
-                            filing_info_text = await filing_number_element.text_content()
-
-                            # Use regular expression to extract the filing number
-                            filing_number_match = re.search(r'Filing\s*Number\s*:\s*(\d+/\d+)', filing_info_text)
-
-                            # Check if a match is found
-                            if filing_number_match:
-                                filing_number = filing_number_match.group(1).strip()
-                                # Return the extracted filing number
-                                return filing_number
-                            else:
-                                print("Filing number not found.")
-                        else:
-                            print("Filing number element not found.")
-
-                    except Exception as e:
-                        print(f"An error occurred while fetching Filing Number: {str(e)}")
-                        return None
-
-                async def filing_date():
-                    """Extract the filing date value."""
-                    try:
-                        # Locate the element with the filing date
-                        filing_date_label = await case_frame.query_selector("(//span[@class='case_details_table'])[2]")
-
-                        # Get the text content of the element
-                        filing_date_text = await filing_date_label.text_content()
-
-                        # Extract the filing date value from the text
-                        filing_date_value = filing_date_text.split(':')[-1].strip()
-                        # print("Filing Date:", filing_date_value)
-                        return filing_date_value
-                    except Exception as e:
-                        print(f"An error occurred while fetching Filing Date Value: {str(e)}")
-                        return None
-
-                async def registration_number():
-                    """Extract the registration number value."""
-                    try:
-                        # Locate the element with the registration number
-                        registration_number_element = await case_frame.query_selector(
-                            "(//span[@class='case_details_table'])[3]")
-
-                        # Get the text content of the element
-                        registration_number_text = await registration_number_element.text_content()
-
-                        # Use regular expression to extract the registration number
-                        registration_number_match = re.search(r'Registration Number\s*:\s*(\d+/\d+)',
-                                                            registration_number_text)
-                        if registration_number_match:
-                            registration_number = registration_number_match.group(1).strip()
-                            # print("Registration Number:", registration_number)
-                            return registration_number
-                        else:
-                            print("Registration number not found.")
-                            return None
-                    except Exception as e:
-                        print(f"An error occurred while fetching Registration Number: {str(e)}")
-                        return None
-
-                async def crn_number():
-                    """Extract the CRN number value."""
-                    try:
-                        # Locate the element with the CRN number
-                        CRN_Number_element = await case_frame.query_selector("(//span[@class='case_details_table'])[4]")
-
-                        # Get the text content of the element
-                        CRN_Number_text = await CRN_Number_element.text_content()
-
-                        # Extract the CRN number value from the text
-                        CRN_Number = CRN_Number_text.split(':')[-1].strip()
-                        # print("CRN Number:", CRN_Number)
-                        return CRN_Number
-                    except Exception as e:
-                        print(f"An error occurred while fetching CRN Number: {str(e)}")
-                        return None
-
-                async def registration_date():  # Registration Date
-                    try:
-                        # Locate the element using the XPATH and await for it
-                        registration_date_element = await case_frame.query_selector(
-                            '//*[@id="part1"]/div[1]/span[4]/span[2]/label[2]')
-
-                        # Retrieve the text content of the element
-                        registration_date = await registration_date_element.text_content()
-                        if registration_date:
-                            registration_date = registration_date.strip()
-                            # Remove any colons from the date
-                            if ':' in registration_date:
-                                registration_date = registration_date.replace(':', '')
-                            # Return the cleaned registration date
-                            return registration_date
-                        else:
-                            print("Failed to retrieve registration date content.")
-                            return None
-                    except Exception as e:
-                        print(f"An error occurred while fetching Registration Date: {str(e)}")
-                        return None
-
-                async def first_hearing_date():  # First Hearing Date
-                    try:
-                        # Locate the element using the XPATH and await for it
-                        first_hearing_date_element = await case_frame.query_selector('(//div//span//label//strong)[2]')
-
-                        # Retrieve the text content of the element
-                        first_hearing_date = await first_hearing_date_element.text_content()
-                        if first_hearing_date:
-                            first_hearing_date = first_hearing_date.strip()
-                            # Remove any colons from the date
-                            if ':' in first_hearing_date:
-                                first_hearing_date = first_hearing_date.replace(':', '')
-                            # Return the cleaned first hearing date
-                            return first_hearing_date
-                        else:
-                            print("Failed to retrieve first hearing date content.")
-                            return None
-                    except Exception as e:
-                        print(f"An error occurred while fetching First Hearing Date: {str(e)}")
-                        return None
-
-                async def next_hearing():
-                    """Next Hearing Date"""
-                    try:
-                        # Use Playwright's query_selector method with XPath to locate the element
-                        next_hearing_date_element = await case_frame.query_selector('(//div//span//label//strong)[4]')
-                        # Get the text content of the element
-                        next_hearing_date = await next_hearing_date_element.text_content()
-                        # Strip the text and remove colons if present
-                        next_hearing_date = next_hearing_date.strip().replace(':', '')
-                        return next_hearing_date
-                    except Exception as e:
-                        print(f"An error occurred while fetching Next Hearing Date: {str(e)}")
-                        return None
-
-                async def stage_of_case():
-                    """Stage of Case"""
-                    try:
-                        # Use Playwright's query_selector method with XPath to locate the element
-                        stage_of_case_element = await case_frame.query_selector('(//div//span//label//strong)[6]')
-                        # Get the text content of the element
-                        stage_of_case = await stage_of_case_element.text_content()
-                        # Strip the text and remove colons if present
-                        stage_of_case = stage_of_case.strip().replace(':', '')
-                        return stage_of_case
-                    except Exception as e:
-                        print(f"An error occurred while fetching Stage of Case: {str(e)}")
-                        return None
-
-                async def court_number_and_judge():
-                    """Court Number and Judge"""
-                    try:
-                        # Use Playwright's query_selector method with XPath to locate the element
-                        court_number_and_judge_element = await case_frame.query_selector('(//div//span//label//strong)[8]')
-                        # Get the text content of the element
-                        court_number_and_judge = await court_number_and_judge_element.text_content()
-                        # Strip the text and remove colons if present
-                        court_number_and_judge = court_number_and_judge.strip().replace(':', '')
-                        return court_number_and_judge
-                    except Exception as e:
-                        print(f"An error occurred while fetching Court Number and Judge: {str(e)}")
-                        return None
-
-                async def petitioner_and_advocate() -> str:
-                    """Petitioner and Advocate"""
-                    try:
-                        # Use Playwright's query_selector method with class name to locate the element
-                        petitioner_and_advocate_element = await case_frame.query_selector('.Petitioner_Advocate_table')
-                        # Get the text content of the element and remove newlines
-                        petitioner_and_advocate = await petitioner_and_advocate_element.text_content()
-                        petitioner_and_advocate = petitioner_and_advocate.replace('\n', '')
-                        return petitioner_and_advocate
-                    except Exception as e:
-                        print(f"An error occurred while fetching Petitioner and Advocate: {str(e)}")
-                        return None
-
-                async def respondent_and_advocate() -> str:
-                    """Fetch the respondent and advocate information from the page."""
-                    try:
-                        # Locate the respondent and advocate table element by its class name
-                        respondent_advocate_table_element = await case_frame.query_selector('.Respondent_Advocate_table')
-
-                        if respondent_advocate_table_element:
-                            # Retrieve the text of the element and replace newlines with an empty string
-                            respondent_advocate_text = await respondent_advocate_table_element.inner_text()
-                            respondent_advocate_text = respondent_advocate_text.replace('\n', '')
-                            return respondent_advocate_text
-                        else:
-                            print("Respondent and Advocate table element not found.")
-                            return None
-
-                    except Exception as e:
-                        print(f"An error occurred while fetching Respondent and Advocate: {str(e)}")
-                        return None
-
-                async def under_act() -> str:
-                    """Fetch the under act information from the page."""
-                    try:
-                        # Locate the under act element using XPath
-                        Under_Act_element = await case_frame.query_selector('//table[@id="act_table"]//tbody//tr[2]//td[1]')
-
-                        if Under_Act_element:
-                            Under_Act_text = await Under_Act_element.inner_text()
-                            return Under_Act_text
-                        else:
-                            print("Under Act element not found.")
-                            return None
-
-                    except Exception as e:
-                        print(f"An error occurred while fetching Under Act(s): {str(e)}")
-                        return None
-
-                async def under_section() -> str:
-                    """Fetch the under section information from the page."""
-                    try:
-                        # Locate the under section element using XPath
-                        Under_Section_element = await case_frame.query_selector(
-                            '//table[@id="act_table"]//tbody//tr[2]//td[2]')
-
-                        if Under_Section_element:
-                            Under_Section_text = await Under_Section_element.inner_text()
-                            return Under_Section_text
-                        else:
-                            print("Under Section element not found.")
-                            return None
-
-                    except Exception as e:
-                        print(f"An error occurred while fetching Under Section(s): {str(e)}")
-                        return None
-
-                # case_type = await case_type()
-                # filing_number = await filing_number()
-                # filing_date = await filing_date()
-                # registration_number = await registration_number()
-                # crn_number = await crn_number()
-                # registration_date = await registration_date()
-                # first_hearing_date = await first_hearing_date()
-                # next_hearing = await next_hearing()
-                # stage_of_case = await stage_of_case()
-                # court_number_and_judge = await court_number_and_judge()
-                # petitioner_and_advocate = await petitioner_and_advocate()
-                # respondent_and_advocate = await respondent_and_advocate()
-                # under_act = await under_act()
-                # under_section = await under_section()
-
-                # Use asyncio.gather to run all functions concurrently
-                (
-                    case_type,
-                    filing_number,
-                    filing_date,
-                    registration_number,
-                    crn_number,
-                    registration_date,
-                    first_hearing_date,
-                    next_hearing,
-                    stage_of_case,
-                    court_number_and_judge,
-                    petitioner_and_advocate,
-                    respondent_and_advocate,
-                    under_act,
-                    under_section,
-                ) = await asyncio.gather(
-                    case_type(),
-                    filing_number(),
-                    filing_date(),
-                    registration_number(),
-                    crn_number(),
-                    registration_date(),
-                    first_hearing_date(),
-                    next_hearing(),
-                    stage_of_case(),
-                    court_number_and_judge(),
-                    petitioner_and_advocate(),
-                    respondent_and_advocate(),
-                    under_act(),
-                    under_section()
+                # Extract the "Case Types" value
+                # Run all asynchronous functions concurrently
+                results = await asyncio.gather(
+                    case_type(case_frame),
+                    filing_number(case_frame),
+                    filing_date(case_frame),
+                    registration_number(case_frame),
+                    crn_number(case_frame),
+                    registration_date(case_frame),
+                    first_hearing_date(case_frame),
+                    next_hearing(case_frame),
+                    stage_of_case(case_frame),
+                    court_number_and_judge(case_frame),
+                    petitioner_and_advocate(case_frame),
+                    respondent_and_advocate(case_frame),
+                    under_act(case_frame),
+                    under_section(case_frame)
                 )
+                
+                # Unpack the results for use
+                (case_type_result, filing_number_result, filing_date_result,
+                registration_number_result, crn_number_result,
+                registration_date_result, first_hearing_date_result,
+                next_hearing_result, stage_of_case_result,
+                court_number_and_judge_result, petitioner_and_advocate_result,
+                respondent_and_advocate_result, under_act_result,
+                under_section_result) = results
 
-
-                print(f"Case Type: {case_type}")
-                print(f"Filling Number: {filing_number}")
-                print(f"Filling Date: {filing_date}")
-                print(f"Registration Number: {registration_number}")
-                print(f"CRN Number: {crn_number}")
-                print(f"Registration Number: {registration_date}")
-                print(f"First Hearing Date: {first_hearing_date}")
-                print(f"Next Hearing: {next_hearing}")
-                print(f"Stage of Case: {stage_of_case}")
-                print(f"Court Number and judge: {court_number_and_judge}")
-                print(f"Petitioner and Advocate: {petitioner_and_advocate}")
-                print(f"Respondent and Advocate: {respondent_and_advocate}")
-                print(f"Under Act: {under_act}")
-                print(f"Under Section: {under_section}")
+                # Print the results
+                print(f"Case Type: {case_type_result}")
+                print(f"Filing Number: {filing_number_result}")
+                print(f"Filing Date: {filing_date_result}")
+                print(f"Registration Number: {registration_number_result}")
+                print(f"CRN Number: {crn_number_result}")
+                print(f"Registration Date: {registration_date_result}")
+                print(f"First Hearing Date: {first_hearing_date_result}")
+                print(f"Next Hearing: {next_hearing_result}")
+                print(f"Stage of Case: {stage_of_case_result}")
+                print(f"Court Number and Judge: {court_number_and_judge_result}")
+                print(f"Petitioner and Advocate: {petitioner_and_advocate_result}")
+                print(f"Respondent and Advocate: {respondent_and_advocate_result}")
+                print(f"Under Act: {under_act_result}")
+                print(f"Under Section: {under_section_result}")
 
                 # Example usage:
                 data_to_save = [
                     case[0],
-                    case_type,
-                    filing_number,
-                    filing_date,
-                    registration_number,
-                    registration_date,
-                    crn_number,
-                    first_hearing_date,
-                    next_hearing,
-                    stage_of_case,
-                    court_number_and_judge,
-                    petitioner_and_advocate,
-                    respondent_and_advocate,
-                    under_act,
-                    under_section,
+                    case_type_result,
+                    filing_number_result,
+                    filing_date_result,
+                    registration_number_result,
+                    registration_date_result,
+                    crn_number_result,
+                    first_hearing_date_result,
+                    next_hearing_result,
+                    stage_of_case_result,
+                    court_number_and_judge_result,
+                    petitioner_and_advocate_result,
+                    respondent_and_advocate_result,
+                    under_act_result,
+                    under_section_result,
                     current_date
                 ]
 
@@ -541,8 +266,8 @@ class MySpider(scrapy.Spider):
                         element_case_text = await element.inner_text() # Retrieve the text of the element
                         case.append(element_case_text)
                         print("ELEMENT TEXT: ", element_case_text)
-                        await element.click() #Clicking on Case(Element) for second captcha
                         await page.wait_for_load_state(NETWORK_IDLE)
+                        await element.click() #Clicking on Case(Element) for second captcha
 
                         #STEP 7: SOLVING THE SECOND CAPTHCHA
                         await solving_second_captcha()
@@ -610,7 +335,7 @@ class MySpider(scrapy.Spider):
 
                     # Handle alert if present
                     try:
-                        alert = await page.wait_for_event(POPUP_ALERT)
+                        alert = await page.wait_for_event(POPUP_ALERT,timeout=5000)
                         await alert.accept()  # Wait for alert and accept it
                         continue
                     except:
@@ -667,7 +392,9 @@ class MySpider(scrapy.Spider):
             # STEP 1: First Loop
             async def first_loop_year():
                 while True:
+                    await page.wait_for_selector(STATE_BODY_REPORT,state='visible',timeout=5000)
                     elements = await page.query_selector_all(STATE_BODY_REPORT)
+                    await page.wait_for_load_state(NETWORK_IDLE)
                     print("LENGTH OF FIRST LOOP ELEMETS: ",len(elements))
                     first_loop_year_row = 0
                     for element in elements:
