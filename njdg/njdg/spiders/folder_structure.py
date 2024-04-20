@@ -23,7 +23,7 @@ class FileLogger:
         # Define the paths for the CSV files
         csv_file_path = os.path.join(Output_Folder_Location, IDENS.STATE_NAME, "Audit_Logs.csv")
         error_file_path = os.path.join(Output_Folder_Location, IDENS.STATE_NAME, "Error_logs.csv")
-        case_of_hearing_folder = os.path.join(Output_Folder_Location, IDENS.STATE_NAME, IDENS.MAIN_FOLDER)
+        case_of_hearing_folder = os.path.join(Output_Folder_Location, IDENS.STATE_NAME, IDENS.CaseOfHearingFolder)
 
         # Check if the audit log CSV file exists; if not, create it and write the header
         if not os.path.isfile(csv_file_path):
@@ -79,3 +79,13 @@ class FileLogger:
         with open(self.error_file_path, 'a', newline='', encoding='utf-8') as csv_file:
             csv_writer = csv.writer(csv_file)
             csv_writer.writerow(error_log)
+    
+    def create_case_folder(self,element_case_text):
+        path=f'{self.case_of_hearing_folder}/{element_case_text}'
+        if not os.path.exists(path):
+            os.makedirs(path)
+            print(f"Folder '{path}' created successfully.")
+        else:
+            print(f"Folder '{path}' already exists.")
+
+

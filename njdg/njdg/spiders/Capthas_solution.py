@@ -144,7 +144,7 @@ async def solving_second_captcha(page,SECOND_CAPTCHA_IFRAME_XPATH,
             print("Submit button not found.")
 
         print("CHECKING THE ERROR ELEMENT")
-        await asyncio.sleep(1.5)
+        await asyncio.sleep(2)
         error_element = await frame.query_selector(SECOND_CAPTCHA_ERROR_XPATH)
         if error_element:
             print("Error detected, retrying...")

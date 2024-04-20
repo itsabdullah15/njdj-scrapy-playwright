@@ -6,6 +6,7 @@ from datetime import datetime
 from .mapping_file import IDENS
 from ..utils import delete_png_files
 from .folder_structure import FileLogger
+from .history_of_hearing import get_table_data
 from .Capthas_solution import first_captcha_solution,solving_second_captcha
 from .get_data import case_type,filing_number,filing_date,registration_number,crn_number,\
 registration_date,first_hearing_date, next_hearing,stage_of_case,court_number_and_judge,\
@@ -36,7 +37,7 @@ class MySpider(scrapy.Spider):
             # STEP 0: Creating FOLDER/FILE STRUCTURE FOR OUTPUT 
             file_logger = FileLogger() # Create an instance of the FileLogger class
             delete_png_files(IDENS.capctcha_folder_path)
-            browser = await p.chromium.launch(headless=False)
+            browser = await p.chromium.launch(headless=True)
             page = await browser.new_page()
             await page.set_viewport_size({"width": 1920, "height": 1080})
             await page.goto(response.url)
@@ -45,7 +46,7 @@ class MySpider(scrapy.Spider):
             await page.evaluate(FETCH_YEAR_DATE)
             await page.wait_for_load_state(NETWORK_IDLE)  # Wait for the content to update
 
-            async def get_data_from_file():    
+            async def get_data_from_file(element_case_text):    
                 await page.wait_for_selector(IFRAME_XPATH_DATA_PAGE,timeout=10000)
                 iframe_element = await page.query_selector(IFRAME_XPATH_DATA_PAGE)
                 case_frame = await iframe_element.content_frame()
@@ -114,6 +115,7 @@ class MySpider(scrapy.Spider):
                 ]
 
                 file_logger.log_to_csv(data_to_save)
+                await get_table_data(case_frame,element_case_text,browser)
                 case.clear()
                 time.sleep(3)
 
@@ -125,7 +127,9 @@ class MySpider(scrapy.Spider):
                     for element in elements:
                         element_case_text = await element.inner_text() # Retrieve the text of the element
                         case.append(element_case_text)
+                        element_case_text = element_case_text.replace('/', '')
                         print("ELEMENT TEXT: ", element_case_text)
+                        file_logger.create_case_folder(element_case_text)
                         # await page.wait_for_load_state(NETWORK_IDLE)
                         await element.click() #Clicking on Case(Element) for second captcha
 
@@ -133,7 +137,7 @@ class MySpider(scrapy.Spider):
                         await solving_second_captcha(page,SECOND_CAPTCHA_IFRAME_XPATH,
                                  SECOND_LOOP_CAPTCHA_XPATH,SECOND_CAPTCHA_BOX,
                                  SECOND_CAPTCHA_SUBMIT_BUTTON,SECOND_CAPTCHA_ERROR_XPATH)
-                        await get_data_from_file()
+                        await get_data_from_file(element_case_text)
                         delete_png_files(IDENS.capctcha_folder_path)
                         await fifth_back_fucntion(page, FIFTH_BACK_XPATH)
                         time.sleep(1)
