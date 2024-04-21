@@ -37,7 +37,7 @@ class MySpider(scrapy.Spider):
             # STEP 0: Creating FOLDER/FILE STRUCTURE FOR OUTPUT 
             file_logger = FileLogger() # Create an instance of the FileLogger class
             delete_png_files(IDENS.capctcha_folder_path)
-            browser = await p.chromium.launch(headless=True)
+            browser = await p.chromium.launch(headless=False)
             page = await browser.new_page()
             await page.set_viewport_size({"width": 1920, "height": 1080})
             await page.goto(response.url)
@@ -155,11 +155,13 @@ class MySpider(scrapy.Spider):
                     await page.wait_for_selector(EST_REPORT_BODY, state='visible', timeout=5000)
                     elements = await page.query_selector_all(EST_REPORT_BODY)
                     print("LEN OF ELEMENTS in ESTABLISHMENT: ",len(elements))
-                    establishment_row = 0
+                    e = 1
                     for element in elements:
-                        # if establishment_row < 1:
-                        #     establishment_row+=1
-                        #     continue
+                        establishment_xpath=f'(//tbody[@id="est_report_body"]/tr/td[@class="sorting_1"])[{e}]'
+                        establishment_element= await page.query_selector(establishment_xpath)
+                        establishment_element_text= await establishment_element.text_content()
+                        print("ESTABLISHMENT: ", establishment_element_text)
+                        e+=1
                         time.sleep(3)
                         await asyncio.sleep(1)
                         await element.is_visible()
@@ -185,11 +187,14 @@ class MySpider(scrapy.Spider):
                     await page.wait_for_selector(DIST_REPORT_BODY, state="visible",timeout=5000)
                     elements = await page.query_selector_all(DIST_REPORT_BODY)
                     print("LENGTH OF District Element: ",len(elements))
-                    dist_row = 0
+                    d=1
                     for element in elements:
-                        # if dist_row < 4:
-                        #     dist_row+=1
-                        #     continue
+                        dist_xpath = f'(//tbody[@id="dist_report_body"]/tr/td[@class="sorting_1"])[{d}]'
+                        district_element = await page.query_selector(dist_xpath)
+                        district_element_text = await district_element.text_content()
+                        print('District: ', district_element_text)
+                        d+=1
+
                         await asyncio.sleep(1)
                         await element.is_visible()
                         await element.click()
@@ -218,15 +223,20 @@ class MySpider(scrapy.Spider):
                 while True:
                     await page.wait_for_selector(STATE_BODY_REPORT,state='visible',timeout=5000)                            
                     elements = await page.query_selector_all(STATE_BODY_REPORT)
+
                     await page.wait_for_load_state(NETWORK_IDLE)
                     print("LENGTH OF FIRST LOOP ELEMETS: ",len(elements))
-                    first_loop_year_row = 0
+                    y=1 #Year Counter
                     for element in elements:
-                        # if first_loop_year_row < 4:
-                        #     first_loop_year_row += 1
-                        #     continue
+                        #Year Data Extractor
+                        year = f'(//tbody[@id="state_report_body"]/tr/td[@class="sorting_1"])[{y}]'
+                        year_element = await page.query_selector(year)
+                        year_element_text = await year_element.text_content()
+                        print('YEAR', year_element_text)
+                        y+=1
                         await element.click()
                         await page.wait_for_load_state(NETWORK_IDLE)
+                        
                         
                         #STEP 2: Second Button
                         await second_loop_state()

@@ -23,6 +23,7 @@ class FileLogger:
         # Define the paths for the CSV files
         csv_file_path = os.path.join(Output_Folder_Location, IDENS.STATE_NAME, "Audit_Logs.csv")
         error_file_path = os.path.join(Output_Folder_Location, IDENS.STATE_NAME, "Error_logs.csv")
+        data_tracker_file_path = os.path.join(Output_Folder_Location, IDENS.STATE_NAME, "data_track.csv")
         case_of_hearing_folder = os.path.join(Output_Folder_Location, IDENS.STATE_NAME, IDENS.CaseOfHearingFolder)
 
         # Check if the audit log CSV file exists; if not, create it and write the header
@@ -56,6 +57,16 @@ class FileLogger:
                     'Cases',
                     'Error',
                     'Date'
+                ])
+        
+        if not os.path.isfile(data_tracker_file_path):
+            with open(data_tracker_file_path, 'w', newline='', encoding='utf-8') as csv_file:
+                csv_writer = csv.writer(csv_file)
+                csv_writer.writerow([
+                    'year',
+                    'district',
+                    'establishment',
+                    'case'
                 ])
 
         # Create the case of hearing folder if it doesn't exist
