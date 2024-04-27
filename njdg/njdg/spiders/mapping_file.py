@@ -4,3 +4,4 @@ class IDENS:
     CaseOfHearingFolder ='History of Case Hearings'
     Output_Folder_Location = r'/home/abdullah/Desktop/Code/Python/PythonBasicProject/Abdullah/njdj-scrapy-playwright/njdg/njdg/spiders/Output'
     capctcha_folder_path = r'/home/abdullah/Desktop/Code/Python/PythonBasicProject/Abdullah/njdj-scrapy-playwright/njdg/njdg/spiders/CaptchaImg'
+    data_tracker_path = r'/home/abdullah/Desktop/Code/Python/PythonBasicProject/Abdullah/njdj-scrapy-playwright/njdg/njdg/spiders/data_track.py'

@@ -6,7 +6,7 @@ from .mapping_file import IDENS
 class FileLogger:
     def __init__(self):
         # Call setup_files to initialize paths for CSV and error files, as well as the case of hearing folder
-        self.csv_file_path, self.error_file_path, self.case_of_hearing_folder = self.setup_files()
+        self.csv_file_path, self.error_file_path, self.case_of_hearing_folder, self.data_tracker_file_path = self.setup_files()
 
     def setup_files(self):
         current_date = datetime.now().strftime("%Y-%m-%d")  # Get the current date in "YYYY-MM-DD" format
@@ -58,16 +58,6 @@ class FileLogger:
                     'Error',
                     'Date'
                 ])
-        
-        if not os.path.isfile(data_tracker_file_path):
-            with open(data_tracker_file_path, 'w', newline='', encoding='utf-8') as csv_file:
-                csv_writer = csv.writer(csv_file)
-                csv_writer.writerow([
-                    'year',
-                    'district',
-                    'establishment',
-                    'case'
-                ])
 
         # Create the case of hearing folder if it doesn't exist
         if not os.path.exists(case_of_hearing_folder):
@@ -90,6 +80,28 @@ class FileLogger:
         with open(self.error_file_path, 'a', newline='', encoding='utf-8') as csv_file:
             csv_writer = csv.writer(csv_file)
             csv_writer.writerow(error_log)
+    
+    def update_and_save(self, variable_name, new_value):
+        try:
+            with open(IDENS.data_tracker_path, "r") as file:
+                lines = file.readlines()
+        except FileNotFoundError:
+            print("No existing data file found.")
+            return
+
+        updated_lines = []
+        for line in lines:
+            if line.startswith(variable_name):
+                updated_lines.append(f"{variable_name} = {repr(new_value)}\n")
+            else:
+                updated_lines.append(line)
+
+        try:
+            with open(IDENS.data_tracker_path, "w") as file:
+                file.writelines(updated_lines)
+        except Exception as e:
+            print("Error:", e)
+
     
     def create_case_folder(self,element_case_text):
         path=f'{self.case_of_hearing_folder}/{element_case_text}'

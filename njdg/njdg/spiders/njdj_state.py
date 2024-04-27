@@ -30,6 +30,7 @@ class MySpider(scrapy.Spider):
         for url in self.start_urls:
             yield scrapy.Request(url, callback=self.parse)
 
+    
     async def parse(self, response):
         async with async_playwright() as p:
             current_date = datetime.now().strftime("%Y-%m-%d")  # Assign Current Dates
@@ -129,7 +130,6 @@ class MySpider(scrapy.Spider):
                         case.append(element_case_text)
                         element_case_text = element_case_text.replace('/', '')
                         print("ELEMENT TEXT: ", element_case_text)
-                        file_logger.create_case_folder(element_case_text)
                         # await page.wait_for_load_state(NETWORK_IDLE)
                         await element.click() #Clicking on Case(Element) for second captcha
 
@@ -138,6 +138,7 @@ class MySpider(scrapy.Spider):
                                  SECOND_LOOP_CAPTCHA_XPATH,SECOND_CAPTCHA_BOX,
                                  SECOND_CAPTCHA_SUBMIT_BUTTON,SECOND_CAPTCHA_ERROR_XPATH)
                         await get_data_from_file(element_case_text)
+                        file_logger.update_and_save('case',element_case_text)
                         delete_png_files(IDENS.capctcha_folder_path)
                         await fifth_back_fucntion(page, FIFTH_BACK_XPATH)
                         time.sleep(1)
@@ -161,6 +162,7 @@ class MySpider(scrapy.Spider):
                         establishment_element= await page.query_selector(establishment_xpath)
                         establishment_element_text= await establishment_element.text_content()
                         print("ESTABLISHMENT: ", establishment_element_text)
+                        file_logger.update_and_save('establishment',establishment_element_text,)
                         e+=1
                         time.sleep(3)
                         await asyncio.sleep(1)
@@ -193,6 +195,7 @@ class MySpider(scrapy.Spider):
                         district_element = await page.query_selector(dist_xpath)
                         district_element_text = await district_element.text_content()
                         print('District: ', district_element_text)
+                        file_logger.update_and_save('district',district_element_text)
                         d+=1
 
                         await asyncio.sleep(1)
@@ -233,6 +236,7 @@ class MySpider(scrapy.Spider):
                         year_element = await page.query_selector(year)
                         year_element_text = await year_element.text_content()
                         print('YEAR', year_element_text)
+                        file_logger.update_and_save('year',year_element_text)
                         y+=1
                         await element.click()
                         await page.wait_for_load_state(NETWORK_IDLE)
