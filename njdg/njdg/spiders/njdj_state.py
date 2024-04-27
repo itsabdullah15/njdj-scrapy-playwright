@@ -134,10 +134,21 @@ class MySpider(scrapy.Spider):
                         await element.click() #Clicking on Case(Element) for second captcha
 
                         #STEP 7: SOLVING THE SECOND CAPTHCHA
-                        await solving_second_captcha(page,SECOND_CAPTCHA_IFRAME_XPATH,
+                        flag = await solving_second_captcha(page,SECOND_CAPTCHA_IFRAME_XPATH,
                                  SECOND_LOOP_CAPTCHA_XPATH,SECOND_CAPTCHA_BOX,
                                  SECOND_CAPTCHA_SUBMIT_BUTTON,SECOND_CAPTCHA_ERROR_XPATH)
-                        await get_data_from_file(element_case_text)
+                        
+                        if flag==True:
+                            await get_data_from_file(element_case_text)
+                        else:
+                            error_log = [
+                                        case[0],
+                                        'Bot Not Able to Solve Captcha',
+                                        current_date    
+                                        ]
+                            file_logger.log_to_error_file(error_log)
+                            case.clear()
+
                         file_logger.update_and_save('case',element_case_text)
                         delete_png_files(IDENS.capctcha_folder_path)
                         await fifth_back_fucntion(page, FIFTH_BACK_XPATH)

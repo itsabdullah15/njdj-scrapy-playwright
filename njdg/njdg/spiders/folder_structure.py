@@ -6,7 +6,7 @@ from .mapping_file import IDENS
 class FileLogger:
     def __init__(self):
         # Call setup_files to initialize paths for CSV and error files, as well as the case of hearing folder
-        self.csv_file_path, self.error_file_path, self.case_of_hearing_folder, self.data_tracker_file_path = self.setup_files()
+        self.csv_file_path, self.error_file_path, self.case_of_hearing_folder = self.setup_files()
 
     def setup_files(self):
         current_date = datetime.now().strftime("%Y-%m-%d")  # Get the current date in "YYYY-MM-DD" format

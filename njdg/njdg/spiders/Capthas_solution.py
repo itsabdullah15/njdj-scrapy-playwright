@@ -76,6 +76,7 @@ async def solving_second_captcha(page,SECOND_CAPTCHA_IFRAME_XPATH,
                                  SECOND_LOOP_CAPTCHA_XPATH,SECOND_CAPTCHA_BOX,
                                  SECOND_CAPTCHA_SUBMIT_BUTTON,SECOND_CAPTCHA_ERROR_XPATH):
     for _ in range(15):
+        Flag = False
         current_datetime = datetime.now()
         current_datetime = current_datetime.strftime("%d_%m_%Y_%H_%M_%S")
         img_download_path = f'{IDENS.capctcha_folder_path}/{current_datetime}.png'
@@ -152,6 +153,7 @@ async def solving_second_captcha(page,SECOND_CAPTCHA_IFRAME_XPATH,
             continue  # Retry the loop if there is an error
         else:
             print("Successfully submitted the captcha.")
+            Flag = True
             break  # Exit the loop if successful
-
     print("Exited from 2nd Captcha Loop")
+    return Flag
