@@ -20,11 +20,17 @@ SECOND_CAPTCHA_IFRAME_XPATH, SECOND_LOOP_CAPTCHA_XPATH, SECOND_CAPTCHA_BOX, \
 SECOND_CAPTCHA_SUBMIT_BUTTON, SECOND_CAPTCHA_ERROR_XPATH, FIRST_BACK_XPATH, \
 SECOND_BACK_XPATH, THIRD_BACK_XPATH, FOURTH_BACK_XPATH, FIFTH_BACK_XPATH, \
 IFRAME_XPATH_DATA_PAGE, ESTABLISHMENT_NEXT_BUTTON_XPATH, DIST_PAGENATION_XPATH
+from .data_tracker import check_year_element, check_state_element, check_district_element, \
+check_establishment_element, check_case_element
+import njdg.spiders.data_track as data_track
 
+current_district=data_track.district
+# district_bool = not current_district
 
 class MySpider(scrapy.Spider):
     name = "njdj_state"
     start_urls = [IDENS.state_url]
+    
 
     def start_requests(self):
         for url in self.start_urls:
@@ -46,6 +52,14 @@ class MySpider(scrapy.Spider):
             # Click on the link
             await page.evaluate(FETCH_YEAR_DATE)
             await page.wait_for_load_state(NETWORK_IDLE)  # Wait for the content to update
+
+            
+            current_year = data_track.year
+            current_district=data_track.district
+            current_establishment=data_track.establishment
+            current_case=data_track.case
+            
+            
 
             async def get_data_from_file(element_case_text):    
                 await page.wait_for_selector(IFRAME_XPATH_DATA_PAGE,timeout=10000)
@@ -121,7 +135,7 @@ class MySpider(scrapy.Spider):
                 time.sleep(3)
 
             case = []
-            async def get_case_text_and_click_on_case_button():
+            async def get_case_text_and_click_on_case_button(case_bool):
                 while True:
                     await page.wait_for_selector(CASES_XPATH, state='visible')
                     elements = await page.query_selector_all(CASES_XPATH)
@@ -130,29 +144,60 @@ class MySpider(scrapy.Spider):
                         case.append(element_case_text)
                         element_case_text = element_case_text.replace('/', '')
                         print("ELEMENT TEXT: ", element_case_text)
-                        # await page.wait_for_load_state(NETWORK_IDLE)
-                        await element.click() #Clicking on Case(Element) for second captcha
-
-                        #STEP 7: SOLVING THE SECOND CAPTHCHA
-                        flag = await solving_second_captcha(page,SECOND_CAPTCHA_IFRAME_XPATH,
-                                 SECOND_LOOP_CAPTCHA_XPATH,SECOND_CAPTCHA_BOX,
-                                 SECOND_CAPTCHA_SUBMIT_BUTTON,SECOND_CAPTCHA_ERROR_XPATH)
                         
-                        if flag==True:
-                            await get_data_from_file(element_case_text)
-                        else:
-                            error_log = [
-                                        case[0],
-                                        'Bot Not Able to Solve Captcha',
-                                        current_date    
-                                        ]
-                            file_logger.log_to_error_file(error_log)
-                            case.clear()
+                        if not case_bool and element_case_text==current_case:
+                            # await page.wait_for_load_state(NETWORK_IDLE)
+                            await element.click() #Clicking on Case(Element) for second captcha
 
-                        file_logger.update_and_save('case',element_case_text)
-                        delete_png_files(IDENS.capctcha_folder_path)
-                        await fifth_back_fucntion(page, FIFTH_BACK_XPATH)
-                        time.sleep(1)
+                            #STEP 7: SOLVING THE SECOND CAPTHCHA
+                            flag = await solving_second_captcha(page,SECOND_CAPTCHA_IFRAME_XPATH,
+                                    SECOND_LOOP_CAPTCHA_XPATH,SECOND_CAPTCHA_BOX,
+                                    SECOND_CAPTCHA_SUBMIT_BUTTON,SECOND_CAPTCHA_ERROR_XPATH)
+                            
+                            if flag==True:
+                                await get_data_from_file(element_case_text)
+                            else:
+                                error_log = [
+                                            case[0],
+                                            'Bot Not Able to Solve Captcha',
+                                            current_date    
+                                            ]
+                                file_logger.log_to_error_file(error_log)
+                                case.clear()
+
+                            file_logger.update_and_save('case',element_case_text)
+
+                            delete_png_files(IDENS.capctcha_folder_path)
+                            await fifth_back_fucntion(page, FIFTH_BACK_XPATH)
+                            time.sleep(1)
+                            case_bool=True
+                            continue
+                        
+                        if case_bool:
+                            # await page.wait_for_load_state(NETWORK_IDLE)
+                            await element.click() #Clicking on Case(Element) for second captcha
+
+                            #STEP 7: SOLVING THE SECOND CAPTHCHA
+                            flag = await solving_second_captcha(page,SECOND_CAPTCHA_IFRAME_XPATH,
+                                    SECOND_LOOP_CAPTCHA_XPATH,SECOND_CAPTCHA_BOX,
+                                    SECOND_CAPTCHA_SUBMIT_BUTTON,SECOND_CAPTCHA_ERROR_XPATH)
+                            
+                            if flag==True:
+                                await get_data_from_file(element_case_text)
+                            else:
+                                error_log = [
+                                            case[0],
+                                            'Bot Not Able to Solve Captcha',
+                                            current_date    
+                                            ]
+                                file_logger.log_to_error_file(error_log)
+                                case.clear()
+
+                            file_logger.update_and_save('case',element_case_text)
+
+                            delete_png_files(IDENS.capctcha_folder_path)
+                            await fifth_back_fucntion(page, FIFTH_BACK_XPATH)
+                            time.sleep(1)
                     
                     next_page_elements = await page.query_selector_all(CASE_NEXT_PAGENATION_XPATH)
                     if next_page_elements:
@@ -161,7 +206,7 @@ class MySpider(scrapy.Spider):
                         print("Button not present")
                         break
 
-            async def fourth_loop_establishment():
+            async def fourth_loop_establishment(establishment_bool,case_bool):
                 time.sleep(3)
                 while True:
                     await page.wait_for_selector(EST_REPORT_BODY, state='visible', timeout=5000)
@@ -173,20 +218,36 @@ class MySpider(scrapy.Spider):
                         establishment_element= await page.query_selector(establishment_xpath)
                         establishment_element_text= await establishment_element.text_content()
                         print("ESTABLISHMENT: ", establishment_element_text)
-                        file_logger.update_and_save('establishment',establishment_element_text,)
+                        file_logger.update_and_save('establishment',establishment_element_text)
                         e+=1
                         time.sleep(3)
-                        await asyncio.sleep(1)
-                        await element.is_visible()
-                        await element.click()
-                        await page.wait_for_load_state(NETWORK_IDLE)
+                        if not establishment_bool and current_establishment==establishment_element_text:
+                            await asyncio.sleep(1)
+                            await element.is_visible()
+                            await element.click()
+                            await page.wait_for_load_state(NETWORK_IDLE)
 
-                        #STEP 5: First Captcha Solution
-                        await first_captcha_solution(page,CAPTCHA_IMAGE_XPATH,CAPTCHA_FILL_BOX,SUBMIT_BUTTON,POPUP_ALERT)
+                            #STEP 5: First Captcha Solution
+                            await first_captcha_solution(page,CAPTCHA_IMAGE_XPATH,CAPTCHA_FILL_BOX,SUBMIT_BUTTON,POPUP_ALERT)
 
-                        #STEP 6: Click on Button and Get Case text
-                        await get_case_text_and_click_on_case_button()
-                        await fourth_back_func(page, FOURTH_BACK_XPATH)
+                            #STEP 6: Click on Button and Get Case text
+                            await get_case_text_and_click_on_case_button(case_bool)
+                            await fourth_back_func(page, FOURTH_BACK_XPATH)
+                            establishment_bool=True
+                            continue
+                        
+                        if establishment_bool:
+                            await asyncio.sleep(1)
+                            await element.is_visible()
+                            await element.click()
+                            await page.wait_for_load_state(NETWORK_IDLE)
+
+                            #STEP 5: First Captcha Solution
+                            await first_captcha_solution(page,CAPTCHA_IMAGE_XPATH,CAPTCHA_FILL_BOX,SUBMIT_BUTTON,POPUP_ALERT)
+
+                            #STEP 6: Click on Button and Get Case text
+                            await get_case_text_and_click_on_case_button(case_bool=True)
+                            await fourth_back_func(page, FOURTH_BACK_XPATH)
 
                     ESTABLISHMENT_page_elements = await page.query_selector_all(ESTABLISHMENT_NEXT_BUTTON_XPATH)
                     if ESTABLISHMENT_page_elements:
@@ -194,8 +255,9 @@ class MySpider(scrapy.Spider):
                     else:
                         print("Button not present")
                         break
-
-            async def third_loop_district():
+            
+            
+            async def third_loop_district(district_bool,establishment_bool,case_bool):
                 while True:
                     await page.wait_for_selector(DIST_REPORT_BODY, state="visible",timeout=5000)
                     elements = await page.query_selector_all(DIST_REPORT_BODY)
@@ -205,19 +267,37 @@ class MySpider(scrapy.Spider):
                         dist_xpath = f'(//tbody[@id="dist_report_body"]/tr/td[@class="sorting_1"])[{d}]'
                         district_element = await page.query_selector(dist_xpath)
                         district_element_text = await district_element.text_content()
-                        print('District: ', district_element_text)
-                        file_logger.update_and_save('district',district_element_text)
                         d+=1
+                        if not district_bool and district_element_text == current_district:
+                            await asyncio.sleep(1)
+                            await element.is_visible()
+                            await element.click()
+                            await page.wait_for_load_state(NETWORK_IDLE)
+                            
+                            file_logger.update_and_save('district',district_element_text)
+                            print('District: ', district_element_text)
 
-                        await asyncio.sleep(1)
-                        await element.is_visible()
-                        await element.click()
-                        await page.wait_for_load_state(NETWORK_IDLE)
+                            #STEP 4: Fourth Button
+                            print("GOING TO ENTER IN THE FOURTH LOOP ")
+                            await fourth_loop_establishment(establishment_bool,case_bool)
+                            await third_back_func(page, THIRD_BACK_XPATH)
+                            district_bool=True
+                            continue
 
-                        #STEP 4: Fourth Button
-                        print("GOING TO ENTER IN THE FOURTH LOOP ")
-                        await fourth_loop_establishment()
-                        await third_back_func(page, THIRD_BACK_XPATH)
+                        if district_bool:
+                            await asyncio.sleep(1)
+                            await element.is_visible()
+                            await element.click()
+                            await page.wait_for_load_state(NETWORK_IDLE)
+                            
+                            file_logger.update_and_save('district',district_element_text)
+                            print('District: ', district_element_text)
+
+                            #STEP 4: Fourth Button
+                            print("GOING TO ENTER IN THE FOURTH LOOP ")
+                            await fourth_loop_establishment(establishment_bool=True,case_bool=True)
+                            await third_back_func(page, THIRD_BACK_XPATH)
+                        
 
                     dist_page_elements = await page.query_selector_all(DIST_PAGENATION_XPATH)
                     if dist_page_elements: # Check if any next page elements are found
@@ -229,18 +309,28 @@ class MySpider(scrapy.Spider):
 
             async def second_loop_state():
                 await page.wait_for_selector(SECOND_LOOP_BUTTON_STATE_REPORT, state="visible",timeout=5000)
+                STATE_ELEMENT_XPATH = "(//tbody[@id='state_report_body']/tr/td)[1]"
+                state_element = await page.query_selector(STATE_ELEMENT_XPATH)
+                state_element_text = await state_element.text_content()
+                print('STATE', state_element_text)
+                file_logger.update_and_save('state',state_element_text)
                 await page.click(SECOND_LOOP_BUTTON_STATE_REPORT)
                 await page.wait_for_load_state(NETWORK_IDLE) 
 
+            
             # STEP 1: First Loop
             async def first_loop_year():
+                year_bool = not current_year
+                district_bool=not current_district
+                establishment_bool=not current_establishment
+                case_bool=not current_case
                 while True:
                     await page.wait_for_selector(STATE_BODY_REPORT,state='visible',timeout=5000)                            
                     elements = await page.query_selector_all(STATE_BODY_REPORT)
-
                     await page.wait_for_load_state(NETWORK_IDLE)
                     print("LENGTH OF FIRST LOOP ELEMETS: ",len(elements))
                     y=1 #Year Counter
+
                     for element in elements:
                         #Year Data Extractor
                         year = f'(//tbody[@id="state_report_body"]/tr/td[@class="sorting_1"])[{y}]'
@@ -249,24 +339,45 @@ class MySpider(scrapy.Spider):
                         print('YEAR', year_element_text)
                         file_logger.update_and_save('year',year_element_text)
                         y+=1
-                        await element.click()
-                        await page.wait_for_load_state(NETWORK_IDLE)
+
+                        if current_year == year_element_text:
+                            await element.click()
+                            await page.wait_for_load_state(NETWORK_IDLE)
                         
+                            #STEP 2: Second Button
+                            await second_loop_state()
+                            time.sleep(1)
+                            print("GOING TO ENTER IN THE THIRD LOOP DISTRICT")
+                            
+                            #STEP 3: Third Button
+                            await third_loop_district(district_bool,establishment_bool,case_bool)
+                            print("THIRD LOOP DISTRICT DONE")
+                            time.sleep(1)
+                            await second_back_func(page, SECOND_BACK_XPATH)
+                            time.sleep(1)
+                            await first_back_func(page, FIRST_BACK_XPATH)
+                            time.sleep(1)
+                            year_bool=True
+                            continue
                         
-                        #STEP 2: Second Button
-                        await second_loop_state()
-                        time.sleep(1)
-                        print("GOING TO ENTER IN THE THIRD LOOP DISTRICT")
+                        if year_bool:
+                            await element.click()
+                            await page.wait_for_load_state(NETWORK_IDLE)
                         
-                        #STEP 3: Third Button
-                        await third_loop_district()
-                        print("THIRD LOOP DISTRICT DONE")
-                        time.sleep(1)
-                        await second_back_func(page, SECOND_BACK_XPATH)
-                        time.sleep(1)
-                        await first_back_func(page, FIRST_BACK_XPATH)
-                        time.sleep(1)
-                    
+                            #STEP 2: Second Button
+                            await second_loop_state()
+                            time.sleep(1)
+                            print("GOING TO ENTER IN THE THIRD LOOP DISTRICT")
+                            
+                            #STEP 3: Third Button
+                            await third_loop_district(district_bool=True,establishment_bool=True,case_bool=True)
+                            print("THIRD LOOP DISTRICT DONE")
+                            time.sleep(1)
+                            await second_back_func(page, SECOND_BACK_XPATH)
+                            time.sleep(1)
+                            await first_back_func(page, FIRST_BACK_XPATH)
+                            time.sleep(1)
+                        
                     next_page_elements = await page.query_selector_all(EXAMPLE_YEAR_NEXT_PAGENATION)
                     if next_page_elements: # Check if any next page elements are found
                         await next_page_elements[0].click()

@@ -4,11 +4,13 @@ import time
 import asyncio
 import aiohttp
 import time
+import os
 
 link_pdf_xpath='//tr/td[@align="left"]/a[@href]'
 table_xpath='//table[@class="history_table"]/tbody'
 
 async def get_table_data(case_frame,element_case_text,browser):    
+
     table_element = await case_frame.query_selector(table_xpath)
     row_elements = await table_element.query_selector_all('tr') # Find all rows in the table
     
@@ -41,7 +43,7 @@ async def get_table_data(case_frame,element_case_text,browser):
         print("Href value:", href)
         base_url = 'https://njdg.ecourts.gov.in/njdgv1/civil/'
         full_url = base_url + href
-
+        
         context = await browser.new_context()
         page = await context.new_page()  # create a new page inside context.
         await page.goto(full_url)
@@ -52,20 +54,29 @@ async def get_table_data(case_frame,element_case_text,browser):
         await context.close()  # dispose context once it is no longer needed.
 
     async def main():
-        link_elements = await case_frame.query_selector_all('//tr/td[@align="left"]/a[@href]')
-        tasks = []
-        async with aiohttp.ClientSession() as session:
-            for link_element in link_elements:
-                tasks.append(fetch_data(link_element, browser))
-            await asyncio.gather(*tasks)
+        try:
+            link_elements = await case_frame.query_selector_all('//tr/td[@align="left"]/a[@href]')
+            if link_elements:
+                tasks = []
+                async with aiohttp.ClientSession() as session:
+                    for link_element in link_elements:
+                        tasks.append(fetch_data(link_element, browser))  # Assuming browser is defined elsewhere
+                    await asyncio.gather(*tasks)
+        except Exception as e:
+            print(f"An error occurred in the main function: {e}")
             
     await main()
 
-    # Save the data into a CSV file
-    with open(f'{IDENS.Output_Folder_Location}/{IDENS.STATE_NAME}/{IDENS.CaseOfHearingFolder}/{element_case_text}/history_of_hearing.csv', 'w', newline='') as csvfile:
+
+    folder_path = os.path.join(IDENS.Output_Folder_Location, IDENS.STATE_NAME, IDENS.CaseOfHearingFolder, element_case_text)
+    if not os.path.exists(folder_path): # Check if the directory exists
+        os.makedirs(folder_path) # If it doesn't exist, create it
+    
+    csv_file_path = os.path.join(folder_path, 'history_of_hearing.csv')
+    with open(csv_file_path, 'w', newline='') as csvfile:
         writer = csv.writer(csvfile)
         if table_header_data:
             writer.writerow(table_header_data)
         writer.writerows(table_data)
 
-    print("Table data saved to history_of_hearing.csv")
+    print(f"Table data saved to {csv_file_path}/history_of_hearing.csv")

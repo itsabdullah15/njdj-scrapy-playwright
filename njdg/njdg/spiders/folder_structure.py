@@ -23,7 +23,6 @@ class FileLogger:
         # Define the paths for the CSV files
         csv_file_path = os.path.join(Output_Folder_Location, IDENS.STATE_NAME, "Audit_Logs.csv")
         error_file_path = os.path.join(Output_Folder_Location, IDENS.STATE_NAME, "Error_logs.csv")
-        data_tracker_file_path = os.path.join(Output_Folder_Location, IDENS.STATE_NAME, "data_track.csv")
         case_of_hearing_folder = os.path.join(Output_Folder_Location, IDENS.STATE_NAME, IDENS.CaseOfHearingFolder)
 
         # Check if the audit log CSV file exists; if not, create it and write the header
