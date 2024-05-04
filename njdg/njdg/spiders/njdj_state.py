@@ -305,6 +305,7 @@ class MySpider(scrapy.Spider):
                         file_logger.clear_variable('district')
                         break
 
+
             async def second_loop_state():
                 await page.wait_for_selector(SECOND_LOOP_BUTTON_STATE_REPORT, state="visible",timeout=5000)
                 STATE_ELEMENT_XPATH = "(//tbody[@id='state_report_body']/tr/td)[1]"
