@@ -20,12 +20,7 @@ SECOND_CAPTCHA_IFRAME_XPATH, SECOND_LOOP_CAPTCHA_XPATH, SECOND_CAPTCHA_BOX, \
 SECOND_CAPTCHA_SUBMIT_BUTTON, SECOND_CAPTCHA_ERROR_XPATH, FIRST_BACK_XPATH, \
 SECOND_BACK_XPATH, THIRD_BACK_XPATH, FOURTH_BACK_XPATH, FIFTH_BACK_XPATH, \
 IFRAME_XPATH_DATA_PAGE, ESTABLISHMENT_NEXT_BUTTON_XPATH, DIST_PAGENATION_XPATH
-from .data_tracker import check_year_element, check_state_element, check_district_element, \
-check_establishment_element, check_case_element
 import njdg.spiders.data_track as data_track
-
-current_district=data_track.district
-# district_bool = not current_district
 
 class MySpider(scrapy.Spider):
     name = "njdj_state"
@@ -44,7 +39,7 @@ class MySpider(scrapy.Spider):
             # STEP 0: Creating FOLDER/FILE STRUCTURE FOR OUTPUT 
             file_logger = FileLogger() # Create an instance of the FileLogger class
             delete_png_files(IDENS.capctcha_folder_path)
-            browser = await p.chromium.launch(headless=False)
+            browser = await p.chromium.launch(headless=True)
             page = await browser.new_page()
             await page.set_viewport_size({"width": 1920, "height": 1080})
             await page.goto(response.url)
@@ -204,6 +199,7 @@ class MySpider(scrapy.Spider):
                         await next_page_elements[0].click()
                     else:
                         print("Button not present")
+                        file_logger.clear_variable('case')
                         break
 
             async def fourth_loop_establishment(establishment_bool,case_bool):
@@ -254,6 +250,7 @@ class MySpider(scrapy.Spider):
                         await ESTABLISHMENT_page_elements[0].click()
                     else:
                         print("Button not present")
+                        file_logger.clear_variable('establishment')
                         break
             
             
@@ -305,6 +302,7 @@ class MySpider(scrapy.Spider):
                         await asyncio.sleep(3) # Optional: wait for a specific amount of time (e.g., 3 seconds) if needed
                     else:
                         print("Button not present")
+                        file_logger.clear_variable('district')
                         break
 
             async def second_loop_state():

@@ -102,6 +102,28 @@ class FileLogger:
             print("Error:", e)
 
     
+    def clear_variable(self, variable_name):
+        try:
+            with open(IDENS.data_tracker_path, "r") as file:
+                lines = file.readlines()
+        except FileNotFoundError:
+            print("No existing data file found.")
+            return
+
+        updated_lines = []
+        for line in lines:
+            if line.startswith(variable_name):
+                updated_lines.append(f"{variable_name} = ''\n")
+            else:
+                updated_lines.append(line)
+
+        try:
+            with open(IDENS.data_tracker_path, "w") as file:
+                file.writelines(updated_lines)
+        except Exception as e:
+            print("Error:", e)
+
+    
     def create_case_folder(self,element_case_text):
         path=f'{self.case_of_hearing_folder}/{element_case_text}'
         if not os.path.exists(path):
